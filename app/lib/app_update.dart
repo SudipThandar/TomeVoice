@@ -40,14 +40,16 @@ class AppUpdate {
 
 /// Whether there is a newer TomeVoice on GitHub.
 ///
-/// TomeVoice is not in a store, so nothing else tells people a new version is
-/// out. Every few hours the app asks GitHub for the latest release: one
-/// request, no account, nothing sent but the request itself. It can be
-/// turned off.
+/// The test build ships from the fork's `m11-test-apk` release, so that is the
+/// one release it asks about. Every few hours it makes one request, with no
+/// account and nothing sent but the request itself. It can be turned off.
 class AppUpdates {
   AppUpdates._();
 
-  static const releasesApi = 'https://api.github.com/repos/Sayandeep1013/TomeVoice/releases/latest';
+  static const releasesApi = 'https://api.github.com/repos/SudipThandar/TomeVoice/releases/tags/m11-test-apk';
+  static const releasePage = 'https://github.com/SudipThandar/TomeVoice/releases/tag/m11-test-apk';
+  static const universalApk = 'TomeVoice-test.apk';
+  static const downloadRoot = 'https://github.com/SudipThandar/TomeVoice/releases/download/m11-test-apk/';
   static const _every = Duration(hours: 6);
 
   /// How long Later keeps a release from being offered again.
@@ -142,22 +144,18 @@ class AppUpdates {
         await res.drain<void>();
         return null;
       }
-      final body = jsonDecode(await res.transform(utf8.decoder).join()) as Map;
-      // TomeVoice-1.0.0.apk for 64-bit phones, TomeVoice-1.0.0-32bit.apk
-      // for older ones.
-      final apks = [
-        for (final a in (body['assets'] as List? ?? const []))
-          if (a is Map && '${a['name']}'.endsWith('.apk')) a,
-      ];
-      Map? pick(bool bit32) => apks.where((a) => '${a['name']}'.endsWith('-32bit.apk') == bit32).firstOrNull;
+      final body = Map<String, Object?>.from(jsonDecode(await res.transform(utf8.decoder).join()) as Map);
+      // The fork's test release carries one universal APK for both ABIs.
+      final apk = forkApk(body['assets'] as List? ?? const []);
+      if (apk == null) return null;
       return {
-        'tag': body['tag_name'],
-        'url': body['html_url'],
+        'tag': releaseVersion(body),
+        'url': releasePage,
         'title': body['name'],
-        'apk64': pick(false)?['browser_download_url'],
-        'apk32': pick(true)?['browser_download_url'],
-        'bytes64': pick(false)?['size'],
-        'bytes32': pick(true)?['size'],
+        'apk64': apk['url'],
+        'apk32': apk['url'],
+        'bytes64': apk['bytes'],
+        'bytes32': apk['bytes'],
       };
     } on Object {
       return null;
@@ -166,13 +164,17 @@ class AppUpdates {
     }
   }
 
+  /// The release-to-offer decision, exposed for the fork-update tests.
+  @visibleForTesting
+  static AppUpdate? updateFromRelease(Map<String, Object?> latest, String? installed) => _newer(latest, installed);
+
   static AppUpdate? _newer(Map<String, Object?> latest, String? installed) {
     final tag = (latest['tag'] as String? ?? '').replaceFirst(RegExp('^v'), '');
     if (tag.isEmpty || installed == null) return null;
     if (compareVersions(tag, installed) <= 0) return null;
     return AppUpdate(
       version: tag,
-      url: latest['url'] as String? ?? 'https://github.com/Sayandeep1013/TomeVoice/releases/latest',
+      url: latest['url'] as String? ?? releasePage,
       title: latest['title'] as String? ?? 'TomeVoice $tag',
       apk64: _ours(latest['apk64']),
       apk32: _ours(latest['apk32']),
@@ -182,12 +184,39 @@ class AppUpdates {
   }
 }
 
-/// [url] if it is an APK attached to one of TomeVoice's own releases; null
-/// otherwise, so nothing else is ever offered for install.
+/// The release's version. Its tag is a name (`m11-test-apk`), so the number
+/// lives in the title the release page shows. Older releases may still put it
+/// in the tag, and the notes are a last resort.
+@visibleForTesting
+String? releaseVersion(Map<String, Object?> release) {
+  for (final key in ['tag_name', 'name', 'body']) {
+    final text = release[key];
+    if (text is! String) continue;
+    final match = RegExp(r'(?:^|[^0-9])(\d+\.\d+(?:\.\d+)?)').firstMatch(text);
+    if (match != null) return match.group(1);
+  }
+  return null;
+}
+
+/// The universal APK attached to the fork's test release, if any. Nothing else
+/// is ever offered for install.
+@visibleForTesting
+Map<String, Object?>? forkApk(List<Object?> assets) {
+  for (final a in assets) {
+    if (a is! Map || '${a['name']}' != AppUpdates.universalApk) continue;
+    final url = _ours(a['browser_download_url']);
+    if (url == null) continue;
+    return {'url': url, 'bytes': (a['size'] as num?)?.toInt() ?? 0};
+  }
+  return null;
+}
+
+/// [url] if it is the APK on the fork's own release; null otherwise.
 String? _ours(Object? url) =>
     url is String &&
-            url.startsWith('https://github.com/Sayandeep1013/TomeVoice/releases/download/') &&
-            // No "..": it would lead out of TomeVoice's releases once resolved.
+            url.startsWith(AppUpdates.downloadRoot) &&
+            url.endsWith(AppUpdates.universalApk) &&
+            // No ".." or escapes: it must stay inside that release.
             !url.contains('..') &&
             !url.contains('%')
         ? url

@@ -3,6 +3,10 @@
 What changed in each release of TomeVoice, newest first, as each release told it.
 Every release has its APK on [Releases](https://github.com/Sayandeep1013/TomeVoice/releases).
 
+## 2.6.7 (2026-11-28)
+
+Obsidian black is now drawn in code: pointed arches, black glass and old gold, with its own interface lettering. The test build can also check for and install its latest APK from inside the app.
+
 ## 2.6.6 (2026-11-25)
 
 Switching shelves is smooth: it drops less than half the frames it did.

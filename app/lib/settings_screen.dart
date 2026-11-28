@@ -51,6 +51,9 @@ const _svc = SpeechService();
 /// Where the project lives.
 const repositoryUrl = 'https://github.com/Sayandeep1013/TomeVoice';
 
+/// The test build's own release, where the in-app updater finds its APK.
+const testReleaseUrl = 'https://github.com/SudipThandar/TomeVoice/releases/tag/m11-test-apk';
+
 /// The privacy policy, on the site. The Play version's is a page of its
 /// own (the publisher's Google Site), about that version only.
 const privacyUrl = playBuild
@@ -1743,7 +1746,7 @@ class _AboutScreenState extends State<AboutScreen> {
                         _Link(
                           icon: Icons.system_update_outlined,
                           title: _checking ? 'Checking…' : 'Check for updates',
-                          subtitle: 'New versions are published on GitHub',
+                          subtitle: 'See and install the newest test APK',
                           onTap: _checkForUpdate,
                         ),
                       // Play: the source is offered on the licences page.
@@ -1758,8 +1761,8 @@ class _AboutScreenState extends State<AboutScreen> {
                       _Link(
                         icon: Icons.new_releases_outlined,
                         title: 'Releases',
-                        subtitle: 'Download the latest version',
-                        onTap: () => _svc.openUrl('$repositoryUrl/releases/latest'),
+                        subtitle: 'Download the latest test APK',
+                        onTap: () => _svc.openUrl(testReleaseUrl),
                       ),
                       _Link(
                         icon: Icons.privacy_tip_outlined,
