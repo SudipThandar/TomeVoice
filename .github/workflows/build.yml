@@ -17,7 +17,7 @@ on:
         required: false
         default: ""
       variant:
-        description: 'test: only a 64-bit APK of the separate test app (app.tomevoice.test, "TomeVoice Test"), never released. play: the Google Play app bundle (.aab), never released here. play-test: the Play build as the test app, to try on a phone. check: analyze and tests only, no APK'
+        description: 'test: a universal (64- and 32-bit) APK of the separate test app (app.tomevoice.test, "TomeVoice Test"), never released. play: the Google Play app bundle (.aab), never released here. play-test: the Play build as the test app, to try on a phone. check: analyze and tests only, no APK'
         type: choice
         options: [release, test, play, play-test, check]
         default: release
