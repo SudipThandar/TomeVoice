@@ -27,8 +27,8 @@ enum Scene {
   // Its own panels (a hull's plates, cut at two corners), turned to gold.
   solar('Space · solar', 'The sun, gold and the dark', hue: 38, saturation: 1.1),
   dungeon('Dungeon', 'Torchlit stone, rust and bones'),
-  // Volcanic glass: the dungeon's furniture, in a colder light.
-  obsidianBlack('Obsidian black', 'Volcanic glass and cold light', kin: Scene.dungeon, hue: 210, saturation: 0.45);
+  // Black glass in a gothic hand: the dungeon's furniture, in old gold.
+  obsidianBlack('Obsidian black', 'Pointed arches, black glass and old gold', kin: Scene.dungeon, hue: 38, saturation: 0.55);
 
   const Scene(this.label, this.note, {Scene? kin, this.hue, this.saturation = 1}) : _kin = kin;
 
@@ -120,7 +120,12 @@ ui.Image? sceneBackdrop(Scene scene, Size size, double dpr) {
 // the forest's trees and vines looked stiff up close; a painting does not.
 
 /// Scenes with a painted backdrop.
-const _withArt = {Scene.forest, Scene.silverWitch, Scene.solar, Scene.dungeon, Scene.obsidianBlack};
+const _withArt = {Scene.forest, Scene.silverWitch, Scene.solar, Scene.dungeon};
+
+/// Whether [scene] loads a painted backdrop. Obsidian black is drawn entirely
+/// in code, so it deliberately stays out of the art set.
+@visibleForTesting
+bool sceneHasPaintedBackdrop(Scene scene) => _withArt.contains(scene);
 
 /// Whether painted backdrops are loaded (off under `flutter test`, which
 /// keeps to the drawn ones).
@@ -288,6 +293,8 @@ void paintBackdrop(Canvas canvas, Size size, Scene scene) {
   switch (scene) {
     case Scene.dungeon:
       _Dungeon(canvas, size).paint();
+    case Scene.obsidianBlack:
+      _Obsidian(canvas, size).paint();
     case Scene.forest:
       _Forest(canvas, size).paint();
     default:
@@ -392,6 +399,105 @@ Path _jagged(math.Random r, Offset a, Offset b, {int steps = 7, double wobble = 
     path.lineTo(p.dx + j.dx, p.dy + j.dy);
   }
   return path;
+}
+
+// ---------------------------------------------------------------------------
+// Obsidian black: gothic glass drawn in code, never a photograph.
+
+class _Obsidian {
+  _Obsidian(this.c, this.s);
+
+  final Canvas c;
+  final Size s;
+
+  static const _gold = Color(0xFFC9A85A);
+  static const _pale = Color(0xFFE3C98D);
+
+  void paint() {
+    final rect = Offset.zero & s;
+    c.drawRect(
+      rect,
+      Paint()
+        ..shader = ui.Gradient.linear(Offset.zero, Offset(0, s.height), [
+          const Color(0xFF070605),
+          const Color(0xFF100C08),
+          const Color(0xFF0A0806),
+          const Color(0xFF030202),
+        ], const [0, 0.32, 0.72, 1]),
+    );
+
+    // Three lancet windows: black glass cut into the dark, each with a
+    // hairline of old gold. The middle one carries the light.
+    for (var i = -1; i <= 1; i++) {
+      final centre = i == 0;
+      final cx = s.width * (0.5 + i * 0.29);
+      final aw = s.width * (centre ? 0.56 : 0.42);
+      final ah = s.height * (centre ? 0.54 : 0.44);
+      final top = s.height * (centre ? 0.16 : 0.20);
+      final path = Path()
+        ..moveTo(cx - aw / 2, top + ah)
+        ..lineTo(cx - aw / 2, top + aw * 0.45)
+        ..quadraticBezierTo(cx - aw / 2, top + aw * 0.03, cx, top)
+        ..quadraticBezierTo(cx + aw / 2, top + aw * 0.03, cx + aw / 2, top + aw * 0.45)
+        ..lineTo(cx + aw / 2, top + ah)
+        ..close();
+      c.drawPath(
+        path,
+        Paint()
+          ..shader = ui.Gradient.linear(Offset(cx, top), Offset(cx, top + ah), [
+            const Color(0xFF17120C).withValues(alpha: centre ? 0.92 : 0.72),
+            const Color(0xFF090705).withValues(alpha: 0.96),
+            Colors.black.withValues(alpha: 1),
+          ], const [0, 0.48, 1]),
+      );
+      c.drawPath(path, _stroke(_gold.withValues(alpha: centre ? 0.34 : 0.17), centre ? 1.6 : 1.1));
+      c.drawLine(
+        Offset(cx, top + aw * 0.16),
+        Offset(cx, top + ah),
+        _stroke(_gold.withValues(alpha: centre ? 0.14 : 0.07), 1),
+      );
+      for (final f in const [0.42, 0.68]) {
+        final y = top + ah * f;
+        c.drawLine(
+          Offset(cx - aw * 0.42, y),
+          Offset(cx + aw * 0.42, y),
+          _stroke(_gold.withValues(alpha: centre ? 0.09 : 0.04), 0.8),
+        );
+      }
+    }
+
+    // A rose window above the nave: tracery, not a picture.
+    final rose = Offset(s.width / 2, s.height * 0.07);
+    _light(c, rose, s.width * 0.32, _gold.withValues(alpha: 0.10), mid: 0.24);
+    c.drawCircle(rose, s.width * 0.13, _stroke(_gold.withValues(alpha: 0.42), 1.6));
+    c.drawCircle(rose, s.width * 0.10, _stroke(_pale.withValues(alpha: 0.22), 1));
+    for (var i = 0; i < 8; i++) {
+      final a = i / 8 * math.pi * 2;
+      final inner = rose + Offset(math.cos(a), math.sin(a)) * s.width * 0.026;
+      final outer = rose + Offset(math.cos(a), math.sin(a)) * s.width * 0.10;
+      c.drawLine(inner, outer, _stroke(_gold.withValues(alpha: 0.18), 0.9));
+    }
+    c.drawCircle(rose, s.width * 0.032, _fill(_pale.withValues(alpha: 0.30)));
+
+    // The ribbed vault, drawn as fine gold lines over the glass.
+    for (final side in const [-1.0, 1.0]) {
+      final path = Path()
+        ..moveTo(s.width / 2, s.height * 0.03)
+        ..quadraticBezierTo(
+          s.width / 2 + side * s.width * 0.30,
+          s.height * 0.10,
+          s.width / 2 + side * s.width * 0.62,
+          s.height * 0.42,
+        );
+      c.drawPath(path, _stroke(_gold.withValues(alpha: 0.12), 1.1));
+    }
+
+    // A slow sheen on the glass, then grain and the edge shadow.
+    _light(c, Offset(s.width * 0.24, s.height * 0.33), s.width * 0.46, _pale.withValues(alpha: 0.045), mid: 0.3);
+    _light(c, Offset(s.width * 0.78, s.height * 0.58), s.width * 0.38, _gold.withValues(alpha: 0.035), mid: 0.3);
+    _grain(c, s, math.Random(31), dark: 0.20, light: 0.035, per: 22);
+    _vignette(c, s, edge: 0.74);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1034,6 +1140,43 @@ void bracket(Canvas c, Offset corner, double len, double dx, double dy, Color co
 /// [scene]'s frame round a cover filling [rect], its corners [radius].
 void paintCoverFrame(Canvas c, Rect rect, Scene scene, double radius) {
   final t = (rect.width * 0.06).clamp(2.5, 9.0);
+  if (scene == Scene.obsidianBlack) {
+    const gold = Color(0xFFC9A85A);
+    final rr = RRect.fromRectAndRadius(rect.deflate(t / 2), Radius.circular(math.max(radius, t)));
+    c.drawRRect(
+      rr,
+      Paint()
+        ..shader = ui.Gradient.linear(rect.topLeft, rect.bottomRight, [
+          const Color(0xFF2A2114),
+          gold,
+          const Color(0xFF5A431E),
+          const Color(0xFFE3C98D),
+          const Color(0xFF120E08),
+        ], const [0, 0.28, 0.55, 0.8, 1])
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = t,
+    );
+    c.drawRRect(rr.deflate(t / 2), _stroke(Colors.black.withValues(alpha: 0.78), 1));
+    c.drawRRect(rr.inflate(t / 2), _stroke(gold.withValues(alpha: 0.34), 0.8));
+    // Four lancets cut into the gold, one at each corner.
+    for (final p in [
+      rect.topLeft + Offset(t * 1.4, t * 1.4),
+      rect.topRight + Offset(-t * 1.4, t * 1.4),
+      rect.bottomLeft + Offset(t * 1.4, -t * 1.4),
+      rect.bottomRight + Offset(-t * 1.4, -t * 1.4),
+    ]) {
+      final k = math.max(3.5, t * 0.75);
+      c.drawPath(
+        Path()
+          ..moveTo(p.dx - k, p.dy + k)
+          ..lineTo(p.dx - k, p.dy - k * 0.2)
+          ..quadraticBezierTo(p.dx, p.dy - k * 1.6, p.dx + k, p.dy - k * 0.2)
+          ..lineTo(p.dx + k, p.dy + k),
+        _stroke(gold.withValues(alpha: 0.9), math.max(1, t * 0.22)),
+      );
+    }
+    return;
+  }
   switch (scene.kin) {
     case Scene.dungeon:
       final rr = RRect.fromRectAndRadius(rect.deflate(t / 2), Radius.circular(math.max(radius, t)));
@@ -1209,6 +1352,46 @@ void paintPanel(Canvas c, Rect rect, Scene scene, BorderRadius corners, {bool li
     } else {
       c.drawRRect(rr.shift(s.offset).inflate(s.spreadRadius), s.toPaint());
     }
+  }
+  if (scene == Scene.obsidianBlack) {
+    const gold = Color(0xFFC9A85A);
+    c.drawRRect(
+      rr,
+      Paint()
+        ..shader = ui.Gradient.linear(rect.topLeft, Offset(rect.left, rect.bottom), [
+          lit ? const Color(0xFF1B150D) : const Color(0xFF14100A),
+          const Color(0xFF0B0907),
+          const Color(0xFF050403),
+        ], const [0, 0.46, 1]),
+    );
+    c.save();
+    c.clipRRect(rr);
+    // A shallow reflection across the top of the glass.
+    c.drawRect(
+      Rect.fromLTWH(rect.left, rect.top, rect.width, rect.height * 0.42),
+      Paint()
+        ..shader = ui.Gradient.linear(Offset(0, rect.top), Offset(0, rect.top + rect.height * 0.42), [
+          const Color(0xFFE3C98D).withValues(alpha: 0.055),
+          const Color(0xFFE3C98D).withValues(alpha: 0),
+        ], const [0, 1]),
+    );
+    for (var x = rect.left + 12; x < rect.right; x += 18) {
+      c.drawLine(Offset(x, rect.top + 4), Offset(x, rect.bottom - 4), _stroke(gold.withValues(alpha: 0.035), 0.8));
+    }
+    c.restore();
+    c.drawRRect(rr, _stroke(gold.withValues(alpha: lit ? 0.72 : 0.48), 1.2));
+    c.drawRRect(rr.deflate(2.4), _stroke(const Color(0xFFE3C98D).withValues(alpha: 0.14), 0.8));
+    if (rect.height > 42 && rect.width > 72) {
+      for (final p in [
+        rect.topLeft + const Offset(9, 9),
+        rect.topRight + const Offset(-9, 9),
+        rect.bottomLeft + const Offset(9, -9),
+        rect.bottomRight + const Offset(-9, -9),
+      ]) {
+        c.drawCircle(p, 1.8, _fill(gold.withValues(alpha: 0.55)));
+      }
+    }
+    return;
   }
   final r = math.Random((rect.width * 31 + rect.height).round());
   switch (scene.kin) {
@@ -1395,6 +1578,26 @@ void paintButton(Canvas c, Rect rect, Scene scene, Color fill, BorderRadius radi
       ? cutPath(rect, math.min(8.0, rect.shortestSide * 0.3))
       : (Path()..addRRect(radius.toRRect(rect)));
   final bright = fill.computeLuminance() > 0.12;
+  if (scene == Scene.obsidianBlack) {
+    const gold = Color(0xFFC9A85A);
+    c.drawPath(
+      path,
+      Paint()
+        ..shader = ui.Gradient.linear(rect.topCenter, rect.bottomCenter, [
+          Color.lerp(fill, const Color(0xFF1A140C), bright ? 0.25 : 0.6)!,
+          Color.lerp(fill, Colors.black, 0.42)!,
+        ], const [0, 1]),
+    );
+    c.save();
+    c.clipPath(path);
+    for (var y = rect.top + 4; y < rect.bottom; y += 5) {
+      c.drawLine(Offset(rect.left, y), Offset(rect.right, y), _stroke(gold.withValues(alpha: 0.035), 0.8));
+    }
+    c.restore();
+    c.drawPath(path, _stroke(Colors.black.withValues(alpha: 0.72), 1.3));
+    c.drawPath(path, _stroke(gold.withValues(alpha: bright ? 0.78 : 0.46), 1));
+    return;
+  }
   c.drawPath(
     path,
     Paint()
@@ -1712,7 +1915,8 @@ void _dungeonLife(Canvas c, Size s, double t) {
 }
 
 void _obsidianLife(Canvas c, Size s, double t) {
-  // A cold sheen travelling over volcanic glass: two slow glints.
+  // Old gold moving over black glass: two slow glints, like candlelight on
+  // a lancet window rather than a cold reflection.
   for (var i = 0; i < 2; i++) {
     final phase = (t * 0.12 + i * 0.5) % 1.0;
     final x = s.width * (0.18 + i * 0.58) + math.sin(t * 0.4 + i * 2.1) * 18;
@@ -1722,16 +1926,16 @@ void _obsidianLife(Canvas c, Size s, double t) {
       c,
       Offset(x, y),
       70 + 50 * pulse,
-      const Color(0xFF93C5FD).withValues(alpha: 0.05 + 0.06 * pulse),
+      const Color(0xFFE3C98D).withValues(alpha: 0.05 + 0.06 * pulse),
       mid: 0.35,
     );
   }
-  // Fine reflections moving in the dark.
+  // Fine gold dust in the dark.
   for (var i = 0; i < 14; i++) {
     final x = (i * 83.0 + t * 3.0) % (s.width + 30) - 15;
     final y = (i * 137.0 % s.height) + math.sin(t * 0.7 + i) * 10;
     final a = 0.08 + 0.12 * (0.5 + 0.5 * math.sin(t * 1.1 + i * 1.7));
-    c.drawCircle(Offset(x, y), 0.7 + (i % 3) * 0.3, _fill(const Color(0xFFD6E9FF).withValues(alpha: a)));
+    c.drawCircle(Offset(x, y), 0.7 + (i % 3) * 0.3, _fill(const Color(0xFFC9A85A).withValues(alpha: a)));
   }
 }
 
@@ -2000,6 +2204,28 @@ class _EmptyPainter extends CustomPainter {
   @override
   void paint(Canvas c, Size s) {
     final m = Offset(s.width / 2, s.height / 2);
+    if (scene == Scene.obsidianBlack) {
+      const gold = Color(0xFFC9A85A);
+      final arch = Path()
+        ..moveTo(m.dx - s.width * 0.34, m.dy + s.height * 0.34)
+        ..lineTo(m.dx - s.width * 0.34, m.dy - s.height * 0.02)
+        ..quadraticBezierTo(m.dx - s.width * 0.34, m.dy - s.height * 0.36, m.dx, m.dy - s.height * 0.4)
+        ..quadraticBezierTo(m.dx + s.width * 0.34, m.dy - s.height * 0.36, m.dx + s.width * 0.34, m.dy - s.height * 0.02)
+        ..lineTo(m.dx + s.width * 0.34, m.dy + s.height * 0.34)
+        ..close();
+      c.drawPath(arch, _fill(const Color(0xFF0C0906)));
+      c.drawPath(arch, _stroke(gold.withValues(alpha: 0.82), 2)..strokeJoin = StrokeJoin.round);
+      final rose = m + Offset(0, -s.height * 0.13);
+      _light(c, rose, s.width * 0.28, gold.withValues(alpha: 0.20));
+      c.drawCircle(rose, s.width * 0.14, _stroke(gold.withValues(alpha: 0.8), 1.6));
+      for (var i = 0; i < 6; i++) {
+        final a = i / 6 * math.pi * 2;
+        final p = rose + Offset(math.cos(a), math.sin(a)) * s.width * 0.11;
+        c.drawLine(rose, p, _stroke(gold.withValues(alpha: 0.35), 0.9));
+      }
+      c.drawCircle(rose, s.width * 0.04, _fill(const Color(0xFFE3C98D).withValues(alpha: 0.7)));
+      return;
+    }
     switch (scene.kin) {
       case Scene.dungeon:
         // A candle stub burning on a skull.
@@ -2088,6 +2314,46 @@ class _OrnamentPainter extends CustomPainter {
   @override
   void paint(Canvas c, Size s) {
     final r = math.Random(foot ? 2 : 1);
+    if (scene == Scene.obsidianBlack) {
+      const gold = Color(0xFFC9A85A);
+      if (foot) {
+        c.drawLine(Offset(0, s.height - 30), Offset(s.width, s.height - 30),
+            _stroke(gold.withValues(alpha: 0.28), 1));
+        for (var i = 0; i < 3; i++) {
+          final x = s.width * (0.28 + i * 0.22);
+          final k = s.width * 0.075;
+          final y = s.height - 12;
+          c.drawPath(
+            Path()
+              ..moveTo(x - k, y)
+              ..lineTo(x - k, y - k * 1.4)
+              ..quadraticBezierTo(x, y - k * 2.6, x + k, y - k * 1.4)
+              ..lineTo(x + k, y),
+            _stroke(gold.withValues(alpha: 0.72), 1.2),
+          );
+        }
+        return;
+      }
+      final m = Offset(s.width / 2, s.height / 2);
+      final arch = Path()
+        ..moveTo(m.dx - s.width * 0.34, m.dy + s.height * 0.36)
+        ..lineTo(m.dx - s.width * 0.34, m.dy - s.height * 0.04)
+        ..quadraticBezierTo(m.dx - s.width * 0.34, m.dy - s.height * 0.4, m.dx, m.dy - s.height * 0.44)
+        ..quadraticBezierTo(m.dx + s.width * 0.34, m.dy - s.height * 0.4, m.dx + s.width * 0.34, m.dy - s.height * 0.04)
+        ..lineTo(m.dx + s.width * 0.34, m.dy + s.height * 0.36)
+        ..close();
+      c.drawPath(arch, _fill(const Color(0xFF0B0806)));
+      c.drawPath(arch, _stroke(gold.withValues(alpha: 0.75), 1.8));
+      final rose = m + Offset(0, -s.height * 0.08);
+      c.drawCircle(rose, s.width * 0.13, _stroke(gold.withValues(alpha: 0.72), 1.4));
+      for (var i = 0; i < 8; i++) {
+        final a = i / 8 * math.pi * 2;
+        final p = rose + Offset(math.cos(a), math.sin(a)) * s.width * 0.12;
+        c.drawLine(rose, p, _stroke(gold.withValues(alpha: 0.3), 0.9));
+      }
+      c.drawCircle(rose, s.width * 0.035, _fill(const Color(0xFFE3C98D).withValues(alpha: 0.65)));
+      return;
+    }
     switch ((scene.kin, foot)) {
       case (Scene.dungeon, false):
         // Crossed bones behind a skull.
@@ -2220,6 +2486,21 @@ class _DividerPainter extends CustomPainter {
   @override
   void paint(Canvas c, Size s) {
     final y = s.height / 2;
+    if (scene == Scene.obsidianBlack) {
+      const gold = Color(0xFFC9A85A);
+      c.drawLine(Offset(0, y), Offset(s.width, y), _stroke(gold.withValues(alpha: 0.16), 1));
+      for (var x = 14.0; x < s.width - 10; x += 30) {
+        c.drawPath(
+          Path()
+            ..moveTo(x - 7, y + 4)
+            ..lineTo(x - 7, y - 1)
+            ..quadraticBezierTo(x, y - 8, x + 7, y - 1)
+            ..lineTo(x + 7, y + 4),
+          _stroke(gold.withValues(alpha: 0.78), 1.2),
+        );
+      }
+      return;
+    }
     switch (scene.kin) {
       case Scene.dungeon:
         final rune = _stroke(_k(scene, const Color(0xFF8A6A4A)).withValues(alpha: 0.55), 1.1);

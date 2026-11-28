@@ -19,8 +19,9 @@ import 'tap_log.dart';
 ///
 /// * Bodoni Moda for titles, the wordmark and chapter openings: a Didone with
 ///   optical sizes, so it is crisp at 15 px in a list and elegant at 40 px.
-/// * Figtree for everything you tap or read as interface. Small labels are
-///   uppercase with gentle tracking and tabular numbers.
+/// * The chosen theme's face for everything you tap or read as interface:
+///   Figtree generally, but a place or a formal theme brings its own lettering.
+///   Small labels are uppercase with gentle tracking and tabular numbers.
 /// * Newsreader (or Literata, a sans, or the phone's serif) for the page.
 ///
 /// One accent, amber, used sparingly. Spacing comes from [Gap], corners from
@@ -207,6 +208,15 @@ class Skin {
   static const titleFamily = 'BodoniModa';
   static const uiFamily = 'Figtree';
 
+  /// The interface face of [p]. Obsidian black brings its own lettering; every
+  /// other theme keeps the face it had before, so leaving Obsidian restores the
+  /// app's chrome exactly. A book's words are never drawn in this face (see
+  /// [pageStyle]).
+  static String uiFamilyFor(Palette p) => p.id == 'scene-obsidian-black' ? 'Cinzel' : uiFamily;
+
+  /// The interface face of the theme in use now.
+  static String get uiFamilyNow => uiFamilyFor(palette);
+
   /// Bodoni Moda: titles, the wordmark, chapter openings. Its optical size
   /// follows the point size, which is what keeps the hairlines readable small.
   static TextStyle title(BuildContext c,
@@ -239,7 +249,7 @@ class Skin {
       Scene.silverWitch => ('Almendra', 1.0, 0.01, FontWeight.w400),
       Scene.solar => ('Cinzel', 0.9, 0.05, FontWeight.w400),
       Scene.dungeon => ('PirataOne', 1.12, 0.01, FontWeight.w400),
-      Scene.obsidianBlack => ('Cinzel', 0.94, 0.04, FontWeight.w400),
+      Scene.obsidianBlack => ('PirataOne', 1.08, 0.02, FontWeight.w400),
     };
     final s = size * scale;
     return TextStyle(
@@ -274,7 +284,9 @@ class Skin {
         tabular: true,
       ).copyWith(height: 1.45);
 
-  /// Figtree at any weight; the building block of [label] and [meta].
+  /// The theme's interface face at any weight; the building block of [label]
+  /// and [meta]. It follows the chosen palette, so switching theme changes
+  /// every piece of chrome that uses this style.
   static TextStyle ui({
     double size = 14,
     FontWeight weight = FontWeight.w500,
@@ -283,7 +295,7 @@ class Skin {
     bool tabular = false,
   }) =>
       TextStyle(
-        fontFamily: uiFamily,
+        fontFamily: uiFamilyNow,
         fontSize: size,
         fontWeight: weight,
         fontVariations: [FontVariation('wght', weight.value.toDouble())],
@@ -415,7 +427,7 @@ class Skin {
       useMaterial3: true,
       brightness: b,
       colorScheme: scheme,
-      fontFamily: uiFamily,
+      fontFamily: uiFamilyNow,
       scaffoldBackgroundColor: dark ? nightBottom : peach,
       splashFactory: InkSparkle.splashFactory,
       textSelectionTheme: TextSelectionThemeData(
@@ -985,15 +997,15 @@ class Palette {
   static final obsidianBlack = readable(const Palette(
     id: 'scene-obsidian-black',
     label: 'Obsidian black',
-    day: [Color(0xFF06080D), Color(0xFF090C12), Color(0xFF0C1018), Color(0xFF040509)],
-    night: [Color(0xFF06080D), Color(0xFF090C12), Color(0xFF0C1018), Color(0xFF040509)],
-    // A cold sheen on volcanic glass.
-    accent: Color(0xFF93C5FD),
-    accentSoft: Color(0xFFBFDBFE),
-    accentDeep: Color(0xFF4B6F9C),
-    onAccent: Color(0xFF07101B),
-    nightCapsule: Color(0xF20B0F16),
-    nightSheet: Color(0xFF070A10),
+    day: [Color(0xFF080705), Color(0xFF0E0B08), Color(0xFF141008), Color(0xFF030202)],
+    night: [Color(0xFF080705), Color(0xFF0E0B08), Color(0xFF141008), Color(0xFF030202)],
+    // Old gold on black glass: gothic without a photograph.
+    accent: Color(0xFFC9A85A),
+    accentSoft: Color(0xFFE3C98D),
+    accentDeep: Color(0xFF846626),
+    onAccent: Color(0xFF1A1206),
+    nightCapsule: Color(0xF21C1510),
+    nightSheet: Color(0xFF0B0806),
     only: Brightness.dark,
     scene: Scene.obsidianBlack,
   ));

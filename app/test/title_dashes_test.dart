@@ -15,19 +15,19 @@ void main() {
     expect(span.children, isNull);
   });
 
-  test("a feed's title: the dash in Figtree, the words in Bodoni", () {
+  test("a feed's title: the dash in the theme's UI face, the words in Bodoni", () {
     final span = titleWithDashes('Standard Ebooks - Newest Ebooks', style);
     expect(span.toPlainText(), 'Standard Ebooks - Newest Ebooks');
     final parts = span.children!.cast<TextSpan>();
     expect(parts.map((p) => p.text), ['Standard Ebooks ', '-', ' Newest Ebooks']);
-    expect(parts[1].style!.fontFamily, Skin.uiFamily);
+    expect(parts[1].style!.fontFamily, Skin.uiFamilyNow);
     expect(parts[0].style, isNull, reason: 'the words keep the title face from the parent');
     expect(span.style!.fontFamily, Skin.titleFamily);
   });
 
   test('en and em dashes, and a hyphen inside a word, too', () {
     final span = titleWithDashes('Penny-Pincher – a note — more', style);
-    final dashes = span.children!.cast<TextSpan>().where((p) => p.style?.fontFamily == Skin.uiFamily);
+    final dashes = span.children!.cast<TextSpan>().where((p) => p.style?.fontFamily == Skin.uiFamilyNow);
     expect(dashes.map((p) => p.text), ['-', '–', '—']);
   });
 }

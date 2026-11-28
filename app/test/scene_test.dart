@@ -117,6 +117,15 @@ void main() {
       }
     });
 
+    test('only painted scenes ask for an image; Obsidian black is drawn in code', () {
+      expect(
+        Palette.scenes.where((p) => sceneHasPaintedBackdrop(p.scene!)).map((p) => p.scene),
+        [Scene.forest, Scene.silverWitch, Scene.solar, Scene.dungeon],
+      );
+      expect(sceneHasPaintedBackdrop(Scene.obsidianBlack), isFalse,
+          reason: 'no obsidianBlack.webp is bundled or requested');
+    });
+
     test('a scene picked is saved with the settings and chosen again when they are read back', () {
       for (final p in Palette.scenes) {
         final prefs = ListeningPrefs()..paletteId = p.id;

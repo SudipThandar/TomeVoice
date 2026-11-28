@@ -1533,7 +1533,7 @@ TextSpan titleWithDashes(String text, TextStyle style) {
   final dash = RegExp(r'[-‐-―−]+');
   if (!dash.hasMatch(text)) return TextSpan(text: text, style: style);
   final dashStyle = style.copyWith(
-    fontFamily: Skin.uiFamily,
+    fontFamily: Skin.uiFamilyNow,
     fontVariations: [FontVariation('wght', (style.fontWeight ?? FontWeight.w500).value.toDouble())],
   );
   final spans = <TextSpan>[];

@@ -129,6 +129,37 @@ class BrandPainter extends CustomPainter {
 
   /// The scene's rim round the tile.
   void _edge(Canvas c, Rect box, Path shape) {
+    if (scene == Scene.obsidianBlack) {
+      final gold = sceneInk(scene!, const Color(0xFFC9A85A));
+      c.drawPath(
+        shape,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 28
+          ..shader = ui.Gradient.linear(box.topLeft, box.bottomRight, [
+            sceneInk(scene!, const Color(0xFF120E08)),
+            gold,
+            sceneInk(scene!, const Color(0xFF5A431E)),
+            sceneInk(scene!, const Color(0xFFE3C98D)),
+          ], const [0, 0.32, 0.66, 1]),
+      );
+      // Four little lancet arches, cut into the old-gold rim.
+      for (final p in const [Offset(58, 58), Offset(454, 58), Offset(58, 454), Offset(454, 454)]) {
+        c.drawPath(
+          Path()
+            ..moveTo(p.dx - 16, p.dy + 22)
+            ..lineTo(p.dx - 16, p.dy - 8)
+            ..quadraticBezierTo(p.dx, p.dy - 34, p.dx + 16, p.dy - 8)
+            ..lineTo(p.dx + 16, p.dy + 22),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 5
+            ..strokeJoin = StrokeJoin.round
+            ..color = gold,
+        );
+      }
+      return;
+    }
     switch (scene?.kin) {
       case null:
         return;
